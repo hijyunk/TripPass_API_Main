@@ -1,0 +1,12 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./secret.json:/root/TripPassFastAPI/secret.json
+    ports:
+      - "3000:3000"
+    command: [".venv/bin/uvicorn", "app:app", "--host", "0.0.0.0", "--port", "3000", "--reload"]
+    container_name: trippass-fastapi
+ 

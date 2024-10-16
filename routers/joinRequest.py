@@ -117,7 +117,7 @@ async def updateCrewTripMate(
             else:
                 crew_data.sincheongIn = ",".join(sincheongIn)
         session.commit()
-        print(status)
+        # print(status)
     
         if status == 1:
             tripmates = crew_data.tripmate.split(",") if crew_data.tripmate else []
@@ -131,7 +131,7 @@ async def updateCrewTripMate(
 
             # tripPlans 테이블에서 tripId로 계획 찾기
             trip_plans = session.query(tripPlans).filter(tripPlans.planId == crew_data.planId).first()
-            print(trip_plans)
+            # print(trip_plans)
             new_trip_plan = tripPlans(
                 planId=str(uuid.uuid4()),
                 userId=userId,

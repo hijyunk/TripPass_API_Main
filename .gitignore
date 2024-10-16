@@ -3,3 +3,5 @@
 secret.json
 # Ignore Makefile
 Makefile
+.venv
+__pycache__

@@ -2,7 +2,7 @@ from fastapi import FastAPI, File, UploadFile, Form, Depends, HTTPException, Req
 from fastapi.responses import RedirectResponse, JSONResponse
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
-from models.models import user
+from models.models import myTrips, user, crew, tripPlans, joinRequests
 from database import sqldb, KAKAO_CLIENT_ID, KAKAO_REDIRECT_URI
 import base64
 import uuid
@@ -38,6 +38,25 @@ async def getUserTable(
         return {"result code": 200, "response": results}
     finally:
         session.close()
+
+@router.get('/getUserId', description="mySQL user Table 중복 아이디 검사")
+async def getUserIdTable(
+    id: str = None,
+    session: Session = Depends(sqldb.sessionmaker)):
+    if id is None:
+        raise HTTPException(status_code=400, detail="ID is required")
+    try:
+        existing_user = session.query(user).filter(user.id == id).first()
+        if existing_user:
+            return {"is_duplicate": True, "message": "이미 존재하는 아이디입니다"}
+        else:
+            return {"is_duplicate": False, "message": "사용 가능한 아이디입니다"}
+    except Exception as e:
+        session.rollback()
+        raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
+    finally:
+        session.close()
+ 
 
 @router.post('/insertUser', description="mySQL user Table에 추가, userId는 uuid로 생성")
 async def insertUserTable(
@@ -76,6 +95,31 @@ async def insertUserTable(
     
     finally:
         session.close()
+
+@router.delete('/deleteUser', description="mySQL user Table에서 특정 사용자 삭제")
+async def deleteUserTable(
+    userId: str,
+    session: Session = Depends(sqldb.sessionmaker)):
+    try:
+        with session.begin():
+            session.query(joinRequests).filter(joinRequests.userId == userId).delete()
+            session.query(crew).filter(crew.crewLeader == userId).delete()
+            session.query(tripPlans).filter(tripPlans.userId == userId).delete()
+            session.query(myTrips).filter(myTrips.userId == userId).delete()
+            query = session.query(user).filter(user.userId == userId)
+            user_data = query.first()
+            if user_data:
+                session.delete(user_data)
+                session.commit()
+                return {"result code": 200, "response": "User deleted"}
+            else:
+                return {"result code": 404, "response": "User not found"}
+    except Exception as e:
+        session.rollback()
+        return {"result code": 500, "response": str(e)}
+    finally:
+        session.close()
+
 
 @router.post('/updateUserProfileImage', description="Update profile image in the user table of mySQL")
 async def updateUserProfileImage(
@@ -227,7 +271,7 @@ async def kakao_login_callback(code: str):
                     birthDate='2024-01-01',
                     sex="None",
                     personality=None,
-                    mainTrip=""
+                    mainTrip=Null
                 )
                 session.add(user_entry)
             else:
